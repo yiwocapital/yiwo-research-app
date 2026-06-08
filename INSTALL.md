@@ -1,6 +1,6 @@
 # 安装指南
 
-本文档面向**终端用户**：你只需要下载一个二进制文件，让它能在你的电脑上运行起来。不涉及代码、编译或开发。
+本文档面向**终端用户**。`install.sh` 会一次性安装 `yra` CLI 和 Claude Code skills。不涉及代码、编译或开发。
 
 ## 你需要知道什么
 
@@ -17,39 +17,34 @@
 - 飞书账号：在壹渥组织租户内有效
 - 浏览器：用于完成飞书 OAuth 授权（Chrome、Safari、Edge、Firefox 均可）
 
-## 安装方式
+## 安装
 
-选择适合你系统的命令，复制粘贴到终端运行。
-
-### macOS
-
-打开"终端"（Terminal）应用，粘贴：
+打开终端，粘贴：
 
 ```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Darwin_arm64.tar.gz" && mkdir -p ~/.local/bin && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/ && echo "安装完成"
+git clone https://github.com/yiwocapital/yiwo-research-app.git
+cd yiwo-research-app
+./install.sh
 ```
 
-> **Apple Silicon (M1/M2/M3) 用户**：用上面的命令即可。
-> **Intel Mac 用户**：把 URL 中的 `Darwin_arm64` 改为 `Darwin_x86_64`。
+`install.sh` 会自动：
+1. 检测你的操作系统和 CPU 架构
+2. 从 [GitHub Releases](https://github.com/yiwocapital/yiwo-research-app/releases) 下载对应平台的 `yra` 二进制
+3. 安装到 `~/.local/bin/yra`
+4. 复制 3 个 Claude Code skills 到 `~/.claude/skills/`
 
-### Linux
+需要自定义路径或只装部分：
 
 ```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Linux_x86_64.tar.gz" && mkdir -p ~/.local/bin && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/ && echo "安装完成"
+./install.sh --help
 ```
 
-> **ARM Linux 用户**：把 URL 中的 `Linux_x86_64` 改为 `Linux_arm64`。
-
-### Windows
-
-在 PowerShell 中运行：
-
-```powershell
-Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Windows_x86_64.zip" -OutFile "$env:TEMP\yra.zip"
-New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\Programs\yra"
-Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath "$env:LOCALAPPDATA\Programs\yra"
-Write-Host "安装完成"
-```
+常用选项：
+- `--bin-dir <path>`：自定义 yra 二进制目录（默认 `~/.local/bin`）
+- `--skills-dir <path>`：自定义 skills 父目录（默认 `~`，最终落到 `~/.claude/skills`）
+- `--cli-only`：只装 yra，不装 skills
+- `--skills-only`：只装 skills，不装 yra
+- `--version v0.1.0`：安装指定版本（默认 latest）
 
 ## 配置 PATH（重要！）
 
@@ -57,7 +52,7 @@ Write-Host "安装完成"
 
 ### macOS
 
-默认情况下 macOS 不会自动包含 `~/.local/bin` 这个目录。你需要：
+默认情况下 macOS 不会自动包含 `~/.local/bin` 这个目录。`install.sh` 在结束时如果检测到这点会提示你。你需要：
 
 1. 打开 `~/.zshrc`（用 `nano ~/.zshrc` 或 `code ~/.zshrc`）
 2. 在文件末尾添加一行：
@@ -82,16 +77,25 @@ Write-Host "安装完成"
 
 ### Windows
 
+`install.sh` 当前不直接支持 Windows（脚本里 OS 检测会退出）。Windows 用户请在 PowerShell 中：
+
+```powershell
+# 下载 yra 二进制
+Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Windows_x86_64.zip" -OutFile "$env:TEMP\yra.zip"
+
+# 创建安装目录
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\Programs\yra"
+Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath "$env:LOCALAPPDATA\Programs\yra"
+Rename-Item "$env:LOCALAPPDATA\Programs\yra\yra_Windows_x86_64.exe" "$env:LOCALAPPDATA\Programs\yra\yra.exe"
+```
+
+然后把 `%LOCALAPPDATA%\Programs\yra` 加入 PATH：
 1. 按 `Win` 键，搜索"环境变量"，选择"编辑系统环境变量"
 2. 点击"环境变量"按钮
 3. 在"用户变量"中找到 `Path`，双击打开
 4. 点击"新建"，粘贴：`%LOCALAPPDATA%\Programs\yra`
 5. 一路点击"确定"保存
-6. **关闭并重新打开 PowerShell**，运行：
-   ```powershell
-   where.exe yra
-   ```
-   应该显示新安装的路径。
+6. **关闭并重新打开 PowerShell**
 
 ## 验证安装
 
@@ -103,7 +107,7 @@ yra version
 
 预期输出：
 ```
-yra version v1.0.0 (commit: xxx, built: 2026-06-05)
+yra version v0.1.0 (commit: unknown, built: 2026-06-08)
 ```
 
 如果显示"command not found"或类似错误，请回到上面的"配置 PATH"部分。
@@ -204,25 +208,55 @@ yra auth login
 
 ## 卸载
 
-### macOS / Linux
+```bash
+# 在 git clone 的目录里
+./uninstall.sh
 
+# 或者在任意位置
+bash /path/to/yiwo-research-app/uninstall.sh
+
+# 跳过确认提示
+./uninstall.sh --yes
+```
+
+`uninstall.sh` 会删除 yra 二进制和 3 个 skills 目录。
+
+仅删 yra 二进制：
 ```bash
 rm -f ~/.local/bin/yra
 rm -rf ~/.config/yiwo-research-app
 ```
 
-### Windows
-
-```powershell
-Remove-Item "$env:LOCALAPPDATA\Programs\yra\yra.exe"
-Remove-Item -Recurse "$env:APPDATA\yiwo-research-app"
+仅删 skills：
+```bash
+rm -rf ~/.claude/skills/yra-news-summarize-today
+rm -rf ~/.claude/skills/yra-news-search-news
+rm -rf ~/.claude/skills/yra-news-setup
 ```
+
+## 升级
+
+升级到最新版本，重新跑 `./install.sh`（在同一 git clone 目录内）：
+
+```bash
+cd yiwo-research-app
+git pull
+./install.sh
+```
+
+或者指定版本：
+
+```bash
+./install.sh --version v0.2.0
+```
+
+升级不会清除你的认证信息（令牌保存在 `~/.config/yiwo-research-app/config.enc`）。
 
 ## 常见问题
 
 ### "yra: command not found"
 
-PATH 没有正确配置。回到"配置 PATH"部分，根据你的操作系统处理。
+PATH 没有正确配置。回到"配置 PATH"部分。
 
 ### "Error: app credentials not configured. This binary was built without Feishu app credentials"
 
@@ -269,28 +303,6 @@ CLI 需要用 8080 端口接收飞书回调。请：
 ### Windows Defender 报警
 
 下载的二进制是内部工具，未在微软商店签名。点击"更多信息"→"仍要运行"即可。
-
-## 升级
-
-升级到最新版本，重新运行安装命令即可（会覆盖旧版本）：
-
-**macOS**:
-```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Darwin_arm64.tar.gz" && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/
-```
-
-**Linux**:
-```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Linux_x86_64.tar.gz" && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/
-```
-
-**Windows**:
-```powershell
-Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Windows_x86_64.zip" -OutFile "$env:TEMP\yra.zip"
-Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath "$env:LOCALAPPDATA\Programs\yra" -Force
-```
-
-升级不会清除你的认证信息（令牌保存在 `~/.config/yiwo-research-app/config.enc`）。
 
 ## 数据隐私
 
