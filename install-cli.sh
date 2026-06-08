@@ -127,6 +127,15 @@ if ! tar -xzf "$TARBALL" -C "$INSTALL_DIR"; then
     exit 1
 fi
 
+# Tarball contains the binary with OS/ARCH suffix (e.g., yra_Darwin_arm64).
+# Rename it to the bare binary name so it's callable as $BINARY.
+shopt -s nullglob
+EXTRACTED_FILES=("$INSTALL_DIR"/${BINARY}_*)
+shopt -u nullglob
+if [[ ${#EXTRACTED_FILES[@]} -eq 1 ]] && [[ -f "${EXTRACTED_FILES[0]}" ]] && [[ "${EXTRACTED_FILES[0]}" != "$INSTALL_DIR/$BINARY" ]]; then
+    mv "${EXTRACTED_FILES[0]}" "$INSTALL_DIR/$BINARY"
+fi
+
 # Make executable (in case archive didn't preserve)
 chmod +x "$INSTALL_DIR/$BINARY" 2>/dev/null || true
 
