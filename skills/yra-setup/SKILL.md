@@ -1,5 +1,5 @@
 ---
-name: yra-news-setup
+name: yra-setup
 name_zh: 安装与运维
 description: |
   在已安装之后管理 yra-news CLI 和 Claude Code skills。
@@ -114,14 +114,14 @@ Expand-Archive -Path "$env:TEMP\yra-news.zip" -DestinationPath "$env:LOCALAPPDAT
 ```bash
 rm -f ~/.claude/skills/yra-news-summarize-today \
       ~/.claude/skills/yra-news-search-news \
-      ~/.claude/skills/yra-news-setup
+      ~/.claude/skills/yra-setup
 ```
 
 **Windows**：
 ```powershell
 Remove-Item "$env:USERPROFILE\.claude\skills\yra-news-summarize-today" -Force
 Remove-Item "$env:USERPROFILE\.claude\skills\yra-news-search-news" -Force
-Remove-Item "$env:USERPROFILE\.claude\skills\yra-news-setup" -Force
+Remove-Item "$env:USERPROFILE\.claude\skills\yra-setup" -Force
 ```
 
 卸载后需要重启 Claude Code 才会生效。
@@ -198,4 +198,4 @@ yra-news 是否已安装？ → which yra-news
 - 用户说"首次安装 yra-news" → 引导参考 INSTALL.md，不要自己运行安装脚本
 - 用户希望修改飞书应用凭证 → 需要由开发团队重新构建
 - 用户希望更改 `yra-news` 读取的文件夹 → 需要代码变更和重新构建
-- 用户希望升级 skills 内容（不是 CLI）→ skills 通过 yra-news-setup skill 加载到 Claude Code，升级 skills 需要开发者发布新版本（更新 SKILL.md 即可，符号链接自动同步）
+- 用户希望升级 skills 内容（不是 CLI）→ skills 通过 yra-setup skill 加载到 Claude Code，升级 skills 需要开发者发布新版本（更新 SKILL.md 即可，符号链接自动同步）

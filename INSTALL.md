@@ -231,7 +231,7 @@ rm -rf ~/.config/yiwo-research-app
 ```bash
 rm -rf ~/.claude/skills/yra-news-summarize-today
 rm -rf ~/.claude/skills/yra-news-search-news
-rm -rf ~/.claude/skills/yra-news-setup
+rm -rf ~/.claude/skills/yra-setup
 ```
 
 ## 升级

@@ -24,7 +24,7 @@ capabilities:
 
 ## 前置条件
 
-本 skill 需要先安装 `yra-news` CLI 并完成认证。如果尚未安装，请先运行 `yra-news-setup` skill。
+本 skill 需要先安装 `yra-news` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
 
 ## 工作流程
 

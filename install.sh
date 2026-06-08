@@ -144,7 +144,7 @@ install_skills() {
         return 1
     fi
 
-    SKILLS=("yra-news-summarize-today" "yra-news-search-news" "yra-news-setup")
+    SKILLS=("yra-news-summarize-today" "yra-news-search-news" "yra-setup")
 
     INSTALLED=0
     SKIPPED=0
@@ -182,6 +182,19 @@ install_skills() {
     return 0
 }
 
+# ----- Cleanup legacy skills (for upgrade from older names) -----
+
+cleanup_legacy_skills() {
+    local LEGACY=("yra-news-setup")
+    for legacy in "${LEGACY[@]}"; do
+        local path="$SKILLS_TARGET/$legacy"
+        if [ -L "$path" ] || [ -e "$path" ]; then
+            rm -rf "$path"
+            echo "  ✓ Removed legacy skill: $path"
+        fi
+    done
+}
+
 # ----- Run -----
 
 FAILED=0
@@ -191,6 +204,7 @@ if [[ $INSTALL_CLI -eq 1 ]]; then
 fi
 
 if [[ $INSTALL_SKILLS -eq 1 ]]; then
+    cleanup_legacy_skills
     install_skills || FAILED=1
 fi
 
