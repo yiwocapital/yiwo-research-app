@@ -3,14 +3,14 @@ set -e
 
 # YRA Skills - Install script
 # Usage:
-#   ./scripts/install-skills.sh                 # Global install (default)
-#   ./scripts/install-skills.sh --global
-#   ./scripts/install-skills.sh --project       # Install to current directory
-#   ./scripts/install-skills.sh --dir <path>    # Install to specified directory
+#   ./install-skills.sh                        # Global install (default)
+#   ./install-skills.sh --global
+#   ./install-skills.sh --project               # Install to current directory
+#   ./install-skills.sh --dir <path>            # Install to specified directory
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# scripts/install-skills.sh → repo root → skills/
-SKILLS_DIR="$(cd "$SCRIPT_DIR/../skills" && pwd)"
+# install-skills.sh → sibling skills/ directory in the same repo
+SKILLS_DIR="$(cd "$SCRIPT_DIR/skills" && pwd)"
 
 # Skills to install
 SKILLS=(
