@@ -4,18 +4,19 @@
 
 ## 你需要知道什么
 
-`yra` 是一个命令行工具（CLI），它会从飞书 Drive 拉取财经新闻数据给你使用。它已经预编译好，**不需要你自己编译**。
+`yra` 是一个命令行工具（CLI），通过驱动本机 Chrome 浏览器从飞书云文档 Drive 拉取财经新闻数据给你使用。它已经预编译好，**不需要你自己编译**。
 
 工具的工作方式：
-- 第一次使用时，需要在你的浏览器里完成一次飞书 OAuth 授权（飞书会显示具体权限让你勾选）
-- 授权后，访问令牌加密保存在本地。后续 30 天内无需重新授权（令牌会自动续期）
+- 第一次使用时，需要在 headed Chrome 里用飞书 App **扫码登录**
+- 登录后，cookie 保存在本机 `~/.config/yiwo-research-app/browser-profile/`（目录权限 0700）
+- cookie 在浏览器里 30 天内有效，30 天后再扫一次即可
 - 所有数据访问都使用**你自己的飞书账号权限**，读取你被授权查看的内容
 
 ## 系统要求
 
 - 操作系统：**macOS** / **Linux** / **Windows**（10 及以上）
-- 飞书账号：在壹渥组织租户内有效
-- 浏览器：用于完成飞书 OAuth 授权（Chrome、Safari、Edge、Firefox 均可）
+- 飞书账号：是 `yiwocapital` 飞书租户成员（其他租户账号不能用）
+- 浏览器：**Chrome** / **Edge** / **Chromium**（任一）—— yra 会调用本机已装的浏览器
 
 ## 安装
 
@@ -29,9 +30,10 @@ cd yiwo-research-app
 
 `install.sh` 会自动：
 1. 检测你的操作系统和 CPU 架构
-2. 从 [GitHub Releases](https://github.com/yiwocapital/yiwo-research-app/releases) 下载对应平台的 `yra` 二进制
-3. 安装到 `~/.local/bin/yra`
-4. 复制 3 个 Claude Code skills 到 `~/.claude/skills/`
+2. 验证本机有 Chrome/Edge/Chromium（没有则提示安装）
+3. 从 [GitHub Releases](https://github.com/yiwocapital/yiwo-research-app/releases) 下载对应平台的 `yra` 二进制
+4. 安装到 `~/.local/bin/yra`
+5. 复制 3 个 Claude Code skills 到 `~/.claude/skills/`
 
 需要自定义路径或只装部分：
 
@@ -44,7 +46,7 @@ cd yiwo-research-app
 - `--skills-dir <path>`：自定义 skills 父目录（默认 `~`，最终落到 `~/.claude/skills`）
 - `--cli-only`：只装 yra，不装 skills
 - `--skills-only`：只装 skills，不装 yra
-- `--version v0.1.0`：安装指定版本（默认 latest）
+- `--version v0.3.0`：安装指定版本（默认 latest）
 
 ## 配置 PATH（重要！）
 
@@ -107,65 +109,65 @@ yra version
 
 预期输出：
 ```
-yra version v0.1.0 (commit: unknown, built: 2026-06-08)
+yra version v0.3.0 (commit: <short-sha>, built: <date>)
 ```
 
 如果显示"command not found"或类似错误，请回到上面的"配置 PATH"部分。
 
-## 飞书认证
+## 飞书扫码登录
 
-首次使用前必须完成飞书 OAuth 授权。授权后，工具会在你本地保存一个加密的访问令牌。
+首次使用前必须扫码登录。**重要**：本机必须有 Chrome / Edge / Chromium 之一。
 
-### 步骤 1：触发授权流程
+### 步骤 1：触发登录流程
 
 ```bash
 yra auth login
 ```
 
-**重要**：`yra` 启动后会监听本地 `8080` 端口，用于接收飞书回调。
-- 如果你的电脑**已经有程序占用 8080 端口**，授权会失败（详见下方"常见问题"）
-- 不要关闭这个终端窗口——它会一直等待浏览器授权
-
-### 步骤 2：在浏览器授权
-
-终端会输出：
-```
-Opening browser for Feishu authentication...
-If the browser doesn't open automatically, please visit:
-https://open.feishu.cn/open-apis/authen/v1/index?app_id=...&scope=drive%3Adrive%3Areadonly...
-```
+这会：
+1. 启动 headed Chrome 窗口
+2. 打开飞书登录页 `https://accounts.feishu.cn/accounts/page/login?...`
+3. 窗口里出现**二维码**
 
 **关键操作**：
 
-1. 浏览器跳转到飞书授权页（如果没自动打开，复制 URL 手动粘贴）
-2. **登录**你的飞书账号（如果还没登录）
-3. 飞书会显示**权限列表**，会包含类似这样的条目：
-   - ✅ **查看、评论和下载云空间中所有文件**（对应 `drive:drive:readonly`）
-   - 其他默认身份权限（自动勾选）
+1. 打开手机飞书 App
+2. 扫 Chrome 窗口里的二维码
+3. 在飞书 App 上点"确认登录"
+4. Chrome 窗口**自动**跳转到 `https://yiwocapital.feishu.cn/drive/home/`
+5. 终端打印"登录成功"，cookie 已保存
 
-   **必须勾选"查看、评论和下载云空间中所有文件"**这一项，否则后续数据访问会失败。
-4. 点击**"同意"**或**"授权"**按钮
-5. 浏览器显示"Authentication Successful"
-6. 回到终端——CLI 自动完成
+> yra 不会自动打开 Chrome（避免占用你的工作浏览器）——它会用 chromedp 启动一个独立的 headless-when-needed 实例。**扫码页面就在那个弹出的窗口里**。如果窗口没看到，看任务栏 / Dock。
 
-### 步骤 3：验证认证状态
+整个登录过程通常 5-30 秒。如果 5 分钟没扫码完成，命令会超时退出。
+
+### 步骤 2：验证登录状态
 
 ```bash
-yra auth status --format json
+yra auth status
 ```
 
-预期输出（**关键看 `scope` 字段**）：
+预期输出（人类可读）：
+```
+Profile: /Users/你的用户名/.config/yiwo-research-app/browser-profile
+Status: authenticated (cookies still valid)
+```
 
+或者 JSON 格式（`--format json`）：
 ```json
 {
-  "authenticated": true,
-  "expired": false,
-  "expires_at": "2026-06-07T18:00:00+08:00",
-  "scope": "drive:drive:readonly"
+  "profile_dir": "/Users/你的用户名/.config/yiwo-research-app/browser-profile",
+  "authenticated": true
 }
 ```
 
-如果 `scope` 字段**不包含** `drive:drive:readonly`，说明授权时没有勾选对应权限。需要重新授权（见下方"撤销权限并重新授权"）。
+如果 `authenticated` 是 `false`，说明 cookie 过期或缺失，重新 `yra auth login` 即可。
+
+### Cookie 生命周期
+
+- Chrome 的 cookie 默认 30 天有效
+- 30 天后再扫一次（`yra auth login`）
+- **整个过程完全自动**——你只需要在过期时手动重扫
 
 ## 试一下
 
@@ -174,37 +176,28 @@ yra auth status --format json
 yra news list-hours --date today
 
 # 获取 9 点的新闻（JSON 格式）
-yra news get-hour --file 26060509-news.txt --format json
+yra news get-hour --file 26060509新闻.txt --format json
 
 # 列出 6 月的日报
 yra news list-dailies --month 202606
 
 # 获取 6 月 4 日的日报
-yra news get-daily --file 260604-daily-news.txt
+yra news get-daily --file 260604-daily新闻.txt
 ```
 
-## 撤销权限并重新授权
+## 撤销权限并重新登录
 
-如果你之前授权时漏勾了某些权限，或想换一个飞书账号：
+如果你之前登录时漏了某项权限，或想换一个飞书账号：
 
 ```bash
-# 1. 清除本地保存的令牌
+# 1. 清除本机 profile
 yra auth logout
 
-# 2. 重新走授权流程
+# 2. 重新走登录流程
 yra auth login
 ```
 
-第二步会打开浏览器，**这次记得勾选所有需要的权限**。
-
-## 令牌自动续期
-
-- 访问令牌默认 **2 小时**过期
-- 工具会在令牌过期**前 60 秒**自动用刷新令牌续期
-- 刷新令牌默认 **30 天**有效
-- 30 天后，或飞书主动撤销令牌时，必须重新 `auth login`
-
-整个过程**完全自动**，正常使用中你不需要做任何事情。
+第二步会打开 headed Chrome，**这次记得登录时勾选所有需要的权限**（飞书网页版会显示 Drive 访问权限）。
 
 ## 卸载
 
@@ -247,10 +240,10 @@ git pull
 或者指定版本：
 
 ```bash
-./install.sh --version v0.2.0
+./install.sh --version v0.3.0
 ```
 
-升级不会清除你的认证信息（令牌保存在 `~/.config/yiwo-research-app/config.enc`）。
+升级**不会**清除你的 profile（cookie 保留在 `~/.config/yiwo-research-app/browser-profile/`）。
 
 ## 常见问题
 
@@ -258,47 +251,36 @@ git pull
 
 PATH 没有正确配置。回到"配置 PATH"部分。
 
-### "Error: app credentials not configured. This binary was built without Feishu app credentials"
+### "could not find a supported browser" / "no supported browser found on this system"
 
-你下载的二进制没有内置飞书应用的 `app_id` 和 `app_secret`。请从官方渠道（壹渥内部发布地址）获取正确的二进制，不要使用未签名版本。
+yra 找不到 Chrome / Edge / Chromium。安装一个：
+- macOS: `brew install --cask google-chrome`
+- Linux: `sudo apt update && sudo apt install -y chromium-browser`
+- Windows: 下载 Chrome 安装
 
-### OAuth 授权页面没有"查看、评论和下载云空间"等 Drive 权限
+### headed Chrome 窗口没看到
 
-这说明当前飞书应用后台还没申请 `drive:drive:readonly` 等权限。请联系壹渥技术团队确认应用权限已经申请并发布。
+`yra auth login` 启动的 Chrome 是独立进程，窗口可能在其他窗口后面。检查：
+- macOS: 任务栏 / Dock
+- Windows: 任务栏
+- Linux: 看所有工作区
 
-### "Error: 8080 端口被占用"
+### "登录超时（5 分钟）"
 
-CLI 需要用 8080 端口接收飞书回调。请：
+二维码 5 分钟没扫完。重跑 `yra auth login`。
 
-1. 找出占用 8080 端口的程序：
-   ```bash
-   # macOS / Linux
-   lsof -i :8080
-   # 或
-   netstat -an | grep 8080
-   ```
-2. 关闭该程序（或换一台没有占用的电脑）
-3. 重新运行 `yra auth login`
+### "Browser.downloadProgress: ... state: completed" 但没文件落地
 
-### "feishu API error: 99991679 ... required one of these privileges: [drive:drive, drive:drive:readonly, space:document:retrieve]"
+这是 v0.3.0 早期版本的 selector 问题。yarp 会：
+- 找 `[data-e2e="more-operate-btn"]` 或 `[data-e2e="suite-more-btn"]`（更多按钮）
+- 等菜单出现
+- 找带 `<span class="item-badge-label">下载</span>` 的菜单项并 click
 
-当前令牌的 `scope` 字段不包含 `drive:drive:readonly`。**这是因为你之前授权时漏勾了 Drive 权限**。解决：
+如果飞书改了 UI，按"撤销权限并重新登录"先确认 cookie 还在，再联系维护者更新 selectors。
 
-1. `yra auth logout`
-2. `yra auth login` —— 这次记得勾选"查看、评论和下载云空间中所有文件"
-3. 重新验证：`yra auth status --format json`，确认 `scope` 包含 `drive:drive:readonly`
+### Chrome 弹欢迎对话框
 
-### "feishu API error: 1061004"
-
-你的飞书账号没有被授权访问壹渥数据 Drive。联系数据管理员开通权限。
-
-### "not authenticated" 或 "token expired"
-
-令牌过期。运行 `yra auth login` 重新授权。
-
-### 浏览器没自动打开
-
-终端会打印一个 URL，手动复制到浏览器即可。
+v0.3.0 已在 profile 里写 `First Run` sentinel 和 `Default/Preferences`，正常情况下**不会**再弹"Welcome to Google Chrome"。如果还有，勾掉两个 checkbox（"设为默认浏览器"、"发送使用统计"）即可。
 
 ### Windows Defender 报警
 
@@ -306,11 +288,11 @@ CLI 需要用 8080 端口接收飞书回调。请：
 
 ## 数据隐私
 
-- 本工具**只读**访问飞书 Drive 中你被授权读取的内容
+- 本工具**只读**通过你的浏览器会话访问飞书 Drive 中你被授权读取的内容
 - 不会上传或修改你的任何文件
-- OAuth 令牌加密保存在本地（`~/.config/yiwo-research-app/config.enc`）
+- cookie 保存在本地 `~/.config/yiwo-research-app/browser-profile/`（目录权限 0700）
 - 不会向任何第三方发送数据
-- 飞书应用后台**只申请了只读权限**（`drive:drive:readonly`），没有任何写权限
+- 不向二进制里嵌入任何账号凭证——你看到的 yra 二进制可安全审计
 
 ## 获取帮助
 
