@@ -27,6 +27,16 @@ capabilities:
 
 本 skill 需要先安装 `yra` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
 
+## 故障排查
+
+如果 `yra auth status` 报 `SingletonLock: File exists` 错误，说明上次运行遗留了孤立 Chrome 进程。手动清理：
+
+```bash
+pgrep -f yiwo-research-app | xargs -r kill -TERM
+```
+
+如果仍然报 `context canceled` 错误，请确认 `yra` CLI 版本 ≥ v0.3.0（运行 `yra version` 检查）。v0.3.0 之前的版本存在已知的 context 取消 bug。
+
 ## 工作流程
 
 ### 步骤 1：验证 `yra` 已安装
@@ -52,7 +62,7 @@ yra auth status --format json
 运行：
 
 ```bash
-yra list-hours --date today --format json
+yra news list-hours --date today --format json
 ```
 
 返回 JSON 数组：
@@ -61,9 +71,9 @@ yra list-hours --date today --format json
 [
   {
     "token": "...",
-    "name": "26060509-news.txt",
+    "name": "26060909新闻.txt",
     "size": 15360,
-    "modified_at": "2026-06-05T09:59:04+08:00"
+    "modified_at": "2026-06-09T09:59:04+08:00"
   }
 ]
 ```
@@ -75,7 +85,7 @@ yra list-hours --date today --format json
 对每个文件运行：
 
 ```bash
-yra get-hour --file 26060509-news.txt --format json
+yra news get-hour --file 26060909新闻.txt --format json
 ```
 
 返回结构化 JSON：
