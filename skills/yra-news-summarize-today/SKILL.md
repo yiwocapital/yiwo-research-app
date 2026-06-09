@@ -71,7 +71,7 @@ yra news list-hours --date today --format json
 [
   {
     "token": "...",
-    "name": "26060909新闻.txt",
+    "name": "26060909-news.txt",
     "size": 15360,
     "modified_at": "2026-06-09T09:59:04+08:00"
   }
@@ -85,7 +85,7 @@ yra news list-hours --date today --format json
 对每个文件运行：
 
 ```bash
-yra news get-hour --file 26060909新闻.txt --format json
+yra news get-hour --file 26060909-news.txt --format json
 ```
 
 返回结构化 JSON：

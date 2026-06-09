@@ -176,13 +176,13 @@ Status: authenticated (cookies still valid)
 yra news list-hours --date today
 
 # 获取 9 点的新闻（JSON 格式）
-yra news get-hour --file 26060509新闻.txt --format json
+yra news get-hour --file 26060509-news.txt --format json
 
 # 列出 6 月的日报
 yra news list-dailies --month 202606
 
 # 获取 6 月 4 日的日报
-yra news get-daily --file 260604-daily新闻.txt
+yra news get-daily --file 260604-daily-news.txt
 ```
 
 ## 撤销权限并重新登录
