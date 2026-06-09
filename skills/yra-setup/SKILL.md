@@ -114,7 +114,7 @@ Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath "$env:LOCALAPPDATA\Pro
 
 ### 4. 卸载 skills
 
-终端用户**通常没有本地仓库**，无法使用 `scripts/uninstall-skills.sh`。直接删除符号链接即可：
+直接删除 skills 文件即可：
 
 **macOS / Linux**：
 ```bash
@@ -194,8 +194,6 @@ yra 是否已安装？ → which yra
 | `SingletonLock: File exists` | 上次 yra 遗留的 Chrome 进程 | `pgrep -f yiwo-research-app \| xargs -r kill -TERM`，然后重试 |
 | `context canceled` | chromedp context 提前取消（v0.3.0 旧 bug） | 升级到 v0.3.1+ 或 `yra auth login --force` 重扫 |
 | `chrome failed to start` | 本机无 Chrome/Edge/Chromium | 安装 Chrome 后重试 |
-| 飞书 `1061004` | 没有 Drive 访问权限 | 联系数据管理员 |
-| 飞书 `1061045` | 临时错误 | 等待几秒后重试 |
 
 ## 安全说明
 
@@ -208,5 +206,3 @@ yra 是否已安装？ → which yra
 
 - 用户说"首次安装 yra" → 引导参考 INSTALL.md，不要自己运行安装脚本
 - 用户希望修改飞书应用凭证 → **v0.3+ 已无此概念**，凭证完全在用户浏览器 session 里
-- 用户希望更改 `yra` 读取的文件夹 → 需要代码变更和重新构建（folder token 硬编码在 `main.go`）
-- 用户希望升级 skills 内容 → 需要开发者发布新版本（更新 install/ 子仓库的 SKILL.md + 跑 release 流程）
