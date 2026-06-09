@@ -1,50 +1,33 @@
 # Changelog
 
-## v0.3.0 (2026-06-08)
+## v0.3.0 (2026-06-09)
 
-### Breaking changes
-
-- **完全重写飞书访问层**：飞书 Open API (OAuth user_access_token) → chromedp 浏览器自动化
-- **不再需要**飞书 app / OAuth / `FEISHU_APP_ID` / `FEISHU_APP_SECRET`
-- **不再需要**企业租户成员关系（普通内部用户都能用）
-- 原因：原方案要求 CLI 用户登录的飞书账号必须在数据生产者租户内
-
-### 用户需要做的
+### 你需要做什么
 
 1. 升级 yra：`./install.sh`
-2. **安装 Chrome / Edge / Chromium**（任一，本机已装即可）
-3. **删旧 OAuth 凭证**：`rm -f ~/.config/yiwo-research-app/config.enc`
-4. **重新登录**：`yra auth login` → headed Chrome 弹出 → 用飞书 App **扫码**
-5. 验证：`yra auth status` + `yra news list-hours --date $(date +%Y%m%d)`
+2. **安装 Chrome / Edge / Chromium**（任一，本机已装即可跳过）
+3. **重新登录**：`yra auth login` → 弹 headed Chrome → 用飞书 App 扫码
+4. 验证：`yra auth status` + `yra news list-hours --date $(date +%Y%m%d)`
 
-### 新增
+### 新增功能
 
-- `apps/pkg/yrafeushupage/` — 新的浏览器自动化 Go 库（**唯一的飞书访问入口**）
-- `yra auth login` — 弹 headed Chrome → QR 扫码
-- `yra auth logout` — 删除浏览器 profile（下次需重新扫码）
-- `yra auth status` — 检查 cookie 是否还活着
-- `--format json` 错误 JSON 输出含 `error_code` / `exit_code` / `context` / `fix` 字段
-- Live test 框架（`//go:build live`）— 跑 `go test -tags=live ./apps/pkg/yrafeushupage/...` 验证 selector 健壮性
+- **扫码登录**：`yra auth login` —— 弹浏览器窗口，用飞书 App 扫一下码
+- **登出**：`yra auth logout` —— 删除当前登录态，方便换号
+- **强制重新登录**：`yra auth login --force` —— 清掉当前登录态并重扫（一行切账号）
+- **检查登录状态**：`yra auth status` —— 看 cookie 是否还有效，过期会提示
 
-### 移除
+### 有什么变化
 
-- 内部 `apps/yra/internal/feishu/` 包（Open API 整个 client）
-- 内部 `apps/yra/internal/auth/server.go`（OAuth callback HTTP server）
-- 内部 `apps/yra/internal/auth/browser.go`（系统浏览器跳转）
-- `model.AuthState` 类型 + 关联的 IsExpired / CanRefresh / RefreshIsExpired 方法
-- `config` 包的加密 config.enc（`AES-GCM` 加密 + 机器派生密钥）
-- `Makefile` 的 `FEISHU_APP_ID` / `FEISHU_APP_SECRET` ldflags 注入
-- `cmd/yra/main.go` 的 `appID` / `appSecret` 变量
-- `model.AuthState` JSON 字段（access_token / refresh_token / scope / etc.）
+- 登录方式变了：以前用 OAuth 账号密码，现在改成浏览器扫码
+- 你的本机现在需要装一个 Chrome / Edge / Chromium
+- 不再需要任何飞书 app 凭证（没有 app id / app secret 需要保管）
 
-### 安全原则（CLAUDE.md 重写）
+### Skills 调整
 
-- **原则 1**：所有飞书资源访问必须走用户自己的浏览器会话（不得用 tenant_access_token / 预填 cookie）
-- **原则 2**：profile 目录权限必须用户私有（0700）
-- **原则 3**：发布给用户的二进制不内嵌任何账号凭证（无 ldflags 注入 app_id / app_secret）
+- `yra-news-search-news` 重命名为 `yra-news-search`（升级时自动清理旧目录）
 
 ### 已知限制
 
-- Windows / Linux 浏览器路径：当前只测了 macOS（`/Applications/Google Chrome.app`）；其他平台需要后续补 `findBrowserExecutable` 的 `candidatePaths` 路径
-- v0.3.0 first slice 限制：每个 yra 命令启动一次 Chrome（冷启动 1-2s）；频繁调用可考虑 future work 加 session 池
-- 错误信息仍以英文为主（agent 友好），中文用户路径后续优化
+- Windows / Linux 浏览器路径还在补；当前 macOS 体验最好
+- 每个 yra 命令启动一次 Chrome（冷启动 1-2 秒）
+- 错误提示以英文为主（机器友好），后续会优化
