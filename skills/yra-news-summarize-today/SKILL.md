@@ -3,7 +3,7 @@ name: yra-news-summarize-today
 name_zh: 今日市场总结
 description: |
   生成今日财经市场消息的结构化摘要报告。
-  通过 `yra-news` CLI 从飞书 Drive 拉取小时新闻文件，
+  通过 `yra` CLI 从飞书 Drive 拉取小时新闻文件，
   然后使用 AI 进行分析并生成综合摘要。
 triggers:
   - "总结今天的市场消息"
@@ -25,13 +25,13 @@ capabilities:
 
 ## 前置条件
 
-本 skill 需要先安装 `yra-news` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
+本 skill 需要先安装 `yra` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
 
 ## 工作流程
 
-### 步骤 1：验证 `yra-news` 已安装
+### 步骤 1：验证 `yra` 已安装
 
-运行 `which yra-news` 检查 CLI 是否已安装。
+运行 `which yra` 检查 CLI 是否已安装。
 
 - **未安装**：请先运行 `yra-setup` skill。
 - **已安装**：进入步骤 2。
@@ -41,10 +41,10 @@ capabilities:
 运行：
 
 ```bash
-yra-news auth status --format json
+yra auth status --format json
 ```
 
-- 如果 `authenticated: false` 或 `expired: true`：提示用户运行 `yra-news auth login`。
+- 如果 `authenticated: false` 或 `expired: true`：提示用户运行 `yra auth login`。
 - 如果已认证：进入步骤 3。
 
 ### 步骤 3：列出今日的小时文件
@@ -52,7 +52,7 @@ yra-news auth status --format json
 运行：
 
 ```bash
-yra-news list-hours --date today --format json
+yra list-hours --date today --format json
 ```
 
 返回 JSON 数组：
@@ -75,7 +75,7 @@ yra-news list-hours --date today --format json
 对每个文件运行：
 
 ```bash
-yra-news get-hour --file 26060509-news.txt --format json
+yra get-hour --file 26060509-news.txt --format json
 ```
 
 返回结构化 JSON：

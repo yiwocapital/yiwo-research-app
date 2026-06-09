@@ -1,5 +1,5 @@
 ---
-name: yra-news-search-news
+name: yra-news-search
 name_zh: 新闻搜索
 description: |
   在历史财经市场新闻中搜索特定主题。
@@ -24,7 +24,7 @@ capabilities:
 
 ## 前置条件
 
-本 skill 需要先安装 `yra-news` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
+本 skill 需要先安装 `yra` CLI 并完成认证。如果尚未安装，请先运行 `yra-setup` skill。
 
 ## 工作流程
 
@@ -47,7 +47,7 @@ capabilities:
 - "YYYYMM" → 整月（使用日报文件）
 - "YYYYMMDD" → 指定日期（使用小时文件）
 
-### 步骤 2：验证 `yra-news`
+### 步骤 2：验证 `yra`
 
 与 `yra-news-summarize-today` 相同：检查安装和认证。
 
@@ -57,24 +57,24 @@ capabilities:
 
 | 范围类型 | 拉取文件 | 命令 |
 |----------|----------|------|
-| 单日 | 小时文件 | `yra-news list-hours --date YYYYMMDD` |
-| 多日 | 日报文件 | `yra-news list-dailies --month YYYYMM` |
-| 整月 | 日报文件 | `yra-news list-dailies --month YYYYMM` |
+| 单日 | 小时文件 | `yra list-hours --date YYYYMMDD` |
+| 多日 | 日报文件 | `yra list-dailies --month YYYYMM` |
+| 整月 | 日报文件 | `yra list-dailies --month YYYYMM` |
 
 ### 步骤 4：拉取并解析数据
 
 小时搜索：
 ```bash
-yra-news list-hours --date YYYYMMDD --format json
+yra list-hours --date YYYYMMDD --format json
 # 对每个文件：
-yra-news get-hour --file XXX --format json
+yra get-hour --file XXX --format json
 ```
 
 日报搜索：
 ```bash
-yra-news list-dailies --month YYYYMM --format json
+yra list-dailies --month YYYYMM --format json
 # 对范围内每个文件：
-yra-news get-daily --file XXX --format json
+yra get-daily --file XXX --format json
 ```
 
 ### 步骤 5：过滤消息

@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-SKILLS=("yra-news-summarize-today" "yra-news-search-news" "yra-setup")
+SKILLS=("yra-news-summarize-today" "yra-news-search" "yra-setup")
 SKILLS_TARGET="$SKILLS_PARENT/.claude/skills"
 
 confirm() {
@@ -99,7 +99,7 @@ if [[ $REMOVE_SKILLS -eq 1 ]]; then
     echo ""
 
     echo "=== Remove legacy skills ==="
-    LEGACY=("yra-news-setup")
+    LEGACY=("yra-news-setup" "yra-news-search-news")
     for legacy in "${LEGACY[@]}"; do
         TARGET="$SKILLS_TARGET/$legacy"
         if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
