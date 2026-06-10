@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.3.6 (2026-06-10)
+
+### 你需要做什么
+
+1. 升级 yra：`./install.sh`（一次重装二进制 + 3 个 skills）
+2. **升级后必须重启 Claude Code**，新 skill 内容才会被加载（已加载的 skill 在内存里，不重启不会刷新）
+3. 第一次跑 `yra-news-search`（如「搜索关于美联储的新闻」）会自动全量同步最近 3 个月日报到本地缓存，可能 30s~2min。之后每次都很快
+
+### 新增功能
+
+- **`yra news search`** —— 在本地缓存里做关键字搜索，结果格式：grep 风格的文件 + 行号 + 上下文
+  - 多关键词为 AND 语义：`yra news search 美联储 加息` 只命中同一行同时含「美联储」+「加息」的句子
+  - 默认大小写不敏感；加 `--case-sensitive` 切换
+  - 限定时间范围：`--date YYYYMMDD` / `--month YYYYMM` / `--since YYYYMMDD`
+  - `--context N` 控制上下行数（默认 3）
+  - `--no-sync` 跳过自动同步，只查本地缓存（debug 用）
+  - **跨平台**：用 Go 内置文件扫描，**不依赖系统 grep**，Windows 也能跑
+- **`yra news sync-archive`** —— 增量同步壹渥日报归档到本地缓存目录
+  - 保留最近 3 个月（含当月），其余整月文件夹**静默自动清理**
+  - **双重快路径**：
+    - 过去月份首次完整同步后写一个 `.synced` 标记，下次整月跳过（0 次 API 调用）
+    - 当月所有"日历预测"日报都在本地 → 跳过 listing
+  - 慢路径只下载本地缺失的 `.txt` 文件
+  - **缓存目录**（多平台）：
+    - macOS / Linux：`~/.cache/yiwo-research-app/news/archive/<YYYYMM>/`
+    - Windows：`%LOCALAPPDATA%\yiwo-research-app\cache\news\archive\<YYYYMM>\`
+  - 文件 0600、目录 0700（用户私有）
+
+### Skill 更新
+
+- **`yra-news-search`** 全面重做：
+  - 原本"列文件 + 逐个 `get-daily --format json` + skill 端 LLM 字符串匹配"
+  - 现改为一行 `yra news search "<keyword>" [--month|--date|--since]`，搜索逻辑全部下沉到 yra
+  - 输出按 Markdown 模板整理（主要发现 + 详细结果 + 统计）
+
+### 有什么变化
+
+- `yra news` 加了两个新子命令；老的 `list-dailies` / `get-daily` 等保持不变
+- 搜索从「每次跑都重新下载 + LLM 匹配」改为「一次全量同步 + 本地按行扫描」，token 消耗大幅下降、响应更快
+
 ## v0.3.5 (2026-06-10)
 
 ### 你需要做什么
