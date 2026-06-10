@@ -1,5 +1,36 @@
 # Changelog
 
+## v0.3.3 (2026-06-10)
+
+### 你需要做什么
+
+1. 升级 yra：`./install.sh`
+2. 刷新 skill：`yra-setup` skill 跑一遍（或重新跑 `./install.sh`），让 `~/.claude/skills/yra-news-summarize-today/SKILL.md` 同步到新版「简报」格式
+
+### 新增功能
+
+- **`yra news sync-today [--force]`** —— 一行拉取今日所有小时新闻文件到本地缓存目录
+  - 默认跳过已缓存的同名文件；`--force` 强制刷新
+  - 自动清理缓存里所有**非今日**的残留文件
+  - stdout 按文件名升序输出绝对路径（每行一个），方便管线消费
+  - stderr 一行统计：`cleaned N stale, downloaded M, skipped K (already cached)`
+- **缓存目录**（多平台）：
+  - macOS / Linux：`~/.cache/yiwo-research-app/news/today/`
+  - Windows：`%LOCALAPPDATA%\yiwo-research-app\cache\news\today\`
+  - 文件权限 `0600`、目录 `0700`（用户私有）
+
+### Skill 更新
+
+- **`yra-news-summarize-today`** 全面重做：
+  - 报告改为「壹渥简报（Yiwo Brief）」格式：**核心要点 + 宏观 / 行业 / 个股** 三大类
+  - 输入流程改为 `yra news sync-today` 一行命令，移除原来的 bash 循环 + JSON 解析
+  - 默认走原文 txt（不再 `--format json`），更省 token
+
+### 有什么变化
+
+- 之前要先 `yra news list-hours` 再循环 `get-hour --format json`，现在 `yra news sync-today` 一行搞定
+- 简报内容更聚焦、更适合交易决策参考
+
 ## v0.3.0 (2026-06-09)
 
 ### 你需要做什么
