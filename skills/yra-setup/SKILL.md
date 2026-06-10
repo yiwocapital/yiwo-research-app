@@ -2,7 +2,8 @@
 name: yra-setup
 name_zh: 安装与运维
 description: |
-  在已安装之后管理 yra CLI 和 Claude Code skills。
+  在已安装之后管理 yra CLI 和 yra skills。
+  支持 Claude Code（~/.claude/skills/）和 Codex（~/.codex/skills/）两个 runtime。
   用于升级 yra、升级 skills、重新认证、故障排除、卸载。
   首次安装请参考 INSTALL.md——本 skill 不能安装自己。
 triggers:
@@ -28,9 +29,20 @@ capabilities:
 
 # YRA 安装与运维
 
-在已安装之后管理 `yra` CLI 和相关 Claude Code skills（`yra-news-summarize-today`、`yra-news-search`、`yra-setup`）。
+在已安装之后管理 `yra` CLI 和相关 yra skills（`yra-news-summarize-today`、`yra-news-search`、`yra-setup`）。
 
 > **重要**：本 skill **仅用于已安装之后的管理**。首次安装时本 skill 不可用——请参考 [INSTALL.md](../../INSTALL.md) 由用户**手动**执行。
+
+## 支持的 AI 客户端
+
+yra skills 同时支持两个客户端。安装时默认两个都装，可用 `--target` 控制。
+
+| 客户端 | skills 目录 | 重启方式 |
+|--------|------------|---------|
+| Claude Code | `~/.claude/skills/` | 退出并重新打开 Claude Code |
+| Codex | `~/.codex/skills/` | 退出并重新打开 Codex |
+
+下文所有「`~/.claude/skills/`」的代码示例都同样适用于 `~/.codex/skills/`——遇到一个就把另一个也改了。
 
 ## 本 skill 能做什么
 
@@ -38,7 +50,7 @@ capabilities:
 2. **重新认证** —— 飞书扫码重新登录
 3. **升级 yra CLI** —— 帮助用户下载 yra 二进制文件并安装新版本
 4. **升级 skills** —— 帮助用户下载 skills 并安装新版本
-5. **卸载 skills** —— 移除 Claude Code 中的 skill 符号链接
+5. **卸载 skills** —— 移除 Claude Code 和/或 Codex 中的 skill 目录
 6. **故障排除** —— 按流程诊断常见问题
 
 ## 本 skill 不能做什么
@@ -98,11 +110,13 @@ yra auth login --force
 >
 > **每次升级 yra 必须同时升级 skills**。skills 文件小，无脑删旧装新（**不要做版本检查**）—— install.sh 和下面的手动流程都已按此设计。
 
-**推荐路径**：cd 到 git clone 目录，`git pull` + `./install.sh`。一次完成 yra 二进制 + 3 个 skills 的重装。
+**推荐路径**：cd 到 git clone 目录，`git pull` + `./install.sh`。一次完成 yra 二进制 + skills 的重装。默认 `--target both` 同时装到 Claude Code 和 Codex；只想装一个就传 `--target claude` / `--target codex`。
 
-如果用户不想 clone 仓库，手动升级流程（自动检测平台，4 平台通杀）：
+如果用户不想 clone 仓库，手动升级流程（自动检测平台，4 平台通杀）。
 
-**macOS / Linux**：
+> **升级 skills 时怎么处理两个 runtime**：默认同时升级到 `~/.claude/skills/` 和 `~/.codex/skills/`。如果用户明确说「我只用 Claude」，就只升 `~/.claude/skills/`；反过来同理。
+
+**macOS / Linux**（默认升两个 runtime；想限定就把第二个 `TARGET_DIR=` 改掉）：
 
 ```bash
 # 1. 检测平台 → 构造 yra tarball + skills tarball URL
@@ -124,35 +138,44 @@ install -m 0755 /tmp/yra-extract/yra_* "$HOME/.local/bin/yra"
 rm -f "$HOME/.local/bin/yra_"*
 rm -rf /tmp/yra-extract /tmp/yra.tar.gz
 
-# 3. 升级 skills（无脑 rm + cp，不做版本检查）
+# 3. 升级 skills（无脑 rm + cp，不做版本检查；同时升两个 runtime）
 curl -L -o /tmp/yra-skills.tar.gz "$SKILLS_TARBALL_URL"
 rm -rf /tmp/yra-skills-extract && mkdir -p /tmp/yra-skills-extract
 tar -xzf /tmp/yra-skills.tar.gz -C /tmp/yra-skills-extract
-SKILLS_TARGET="$HOME/.claude/skills"
-mkdir -p "$SKILLS_TARGET"
-for skill in yra-news-summarize-today yra-news-search yra-setup; do
-    rm -rf "$SKILLS_TARGET/$skill"
-    cp -R "/tmp/yra-skills-extract/skills/$skill" "$SKILLS_TARGET/$skill"
+for TARGET_DIR in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+    mkdir -p "$TARGET_DIR"
+    for skill in yra-news-summarize-today yra-news-search yra-setup; do
+        rm -rf "$TARGET_DIR/$skill"
+        cp -R "/tmp/yra-skills-extract/skills/$skill" "$TARGET_DIR/$skill"
+    done
 done
 rm -rf /tmp/yra-skills-extract /tmp/yra-skills.tar.gz
 
 # 4. 验证
-yra version   # 重启 Claude Code 后 skills 才会被重新加载
+yra version   # 重启 Claude Code / Codex 后 skills 才会被重新加载
 ```
 
-> **为什么不用 `tar -xzf -C ~/.local/bin/`**：tar 包内顶层文件名是 `yra_Darwin_arm64`（带平台后缀），不是 `yra`，直接 `-C` 解到目标目录不会覆盖现有 `~/.local/bin/yra`，而是多出一个 `yra_<platform>` 文件 —— `yra version` 看起来"没升级"。
-> **也别用 `tar --transform`**：macOS 默认的 BSD tar 不支持 `--transform`，只有装了 `gtar`（`brew install gnu-tar`）才行。
-> **`install -m 0755` 优于 `mv` + `chmod`**：原子性更好（一个 syscall 序列完成复制+赋权），不会出现「移动完但还没 chmod」的中间态。
+> **为什么不用 `tar -xzf -C ~/.local/bin/`**：tar 包内顶层文件名是 `yra_<OS>_<ARCH>`（带后缀），直接解压到目标目录会留下一个平台后缀的二进制文件，PATH 里旧的 `yra` 没被覆盖，升级看起来「没生效」。
+>
+> **提示**：升级不会清除用户的认证信息（token 保存在 `~/.config/yiwo-research-app/`）。
 
 **Windows**（PowerShell）：
 
 ```powershell
-$BinName = "yra_Windows_x86_64"
+# 0. 平台检测 + 路径常量
+$OS = "Windows"
+$Arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+    "AMD64" { "x86_64" }
+    "ARM64" { "arm64" }
+    default { throw "Unsupported: $env:PROCESSOR_ARCHITECTURE" }
+}
+$BinName = "yra_${OS}_${Arch}"
 $ReleaseBase = "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download"
 $YraTarballUrl = "${ReleaseBase}/${BinName}.tar.gz"
 $SkillsTarballUrl = "${ReleaseBase}/skills.tar.gz"
 $InstallDir = "$env:LOCALAPPDATA\Programs\yra"
-$SkillsTarget = "$env:USERPROFILE\.claude\skills"
+# 同时升 Claude Code 和 Codex 两个 runtime；想限定就只保留其中一个
+$SkillsTargets = @("$env:USERPROFILE\.claude\skills", "$env:USERPROFILE\.codex\skills")
 $YraTarballPath = "$env:TEMP\yra.tar.gz"
 $YraExtractDir = "$env:TEMP\yra-extract"
 $SkillsTarballPath = "$env:TEMP\yra-skills.tar.gz"
@@ -170,43 +193,61 @@ Remove-Item -Force "${InstallDir}\${BinName}.exe" -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force $YraExtractDir
 Remove-Item -Force $YraTarballPath
 
-# 2. 升级 skills（无脑 rm + cp，不做版本检查）
+# 2. 升级 skills（无脑 rm + cp，不做版本检查；同时升两个 runtime）
 Invoke-WebRequest -Uri $SkillsTarballUrl -OutFile $SkillsTarballPath
 Remove-Item -Recurse -Force $SkillsExtractDir -ErrorAction SilentlyContinue
 tar -xzf $SkillsTarballPath -C $SkillsExtractDir
-New-Item -ItemType Directory -Force -Path $SkillsTarget | Out-Null
-foreach ($skill in @("yra-news-summarize-today", "yra-news-search", "yra-setup")) {
-    Remove-Item -Recurse -Force "${SkillsTarget}\${skill}" -ErrorAction SilentlyContinue
-    Copy-Item -Recurse -Force -Path "${SkillsExtractDir}\skills\${skill}" -Destination "${SkillsTarget}\${skill}"
+foreach ($SkillsTarget in $SkillsTargets) {
+    New-Item -ItemType Directory -Force -Path $SkillsTarget | Out-Null
+    foreach ($skill in @("yra-news-summarize-today", "yra-news-search", "yra-setup")) {
+        Remove-Item -Recurse -Force "${SkillsTarget}\${skill}" -ErrorAction SilentlyContinue
+        Copy-Item -Recurse -Force -Path "${SkillsExtractDir}\skills\${skill}" -Destination "${SkillsTarget}\${skill}"
+    }
 }
 Remove-Item -Recurse -Force $SkillsExtractDir
 Remove-Item -Force $SkillsTarballPath
 
 # 3. 验证
-yra version   # 重启 Claude Code 后 skills 才会被重新加载
+yra version   # 重启 Claude Code / Codex 后 skills 才会被重新加载
 ```
-
-> **提示**：升级不会清除用户的认证信息（token 保存在 `~/.config/yiwo-research-app/`）。
 
 ### 4. 卸载 skills
 
-直接删除 skills 文件即可：
+直接删除 skills 文件即可。**同时清 Claude Code + Codex 两个 runtime**（用户说「我只用 X」时再只删对应那个）：
 
 **macOS / Linux**：
 ```bash
-rm -f ~/.claude/skills/yra-news-summarize-today \
-      ~/.claude/skills/yra-news-search \
-      ~/.claude/skills/yra-setup
+# 全部
+rm -rf ~/.claude/skills/yra-news-summarize-today \
+       ~/.claude/skills/yra-news-search \
+       ~/.claude/skills/yra-setup \
+       ~/.codex/skills/yra-news-summarize-today \
+       ~/.codex/skills/yra-news-search \
+       ~/.codex/skills/yra-setup
+
+# 只删 Claude Code
+# rm -rf ~/.claude/skills/yra-news-summarize-today \
+#        ~/.claude/skills/yra-news-search \
+#        ~/.claude/skills/yra-setup
+
+# 只删 Codex
+# rm -rf ~/.codex/skills/yra-news-summarize-today \
+#        ~/.codex/skills/yra-news-search \
+#        ~/.codex/skills/yra-setup
 ```
 
 **Windows**：
 ```powershell
+# 全部
 Remove-Item "$env:USERPROFILE\.claude\skills\yra-news-summarize-today" -Force
 Remove-Item "$env:USERPROFILE\.claude\skills\yra-news-search" -Force
 Remove-Item "$env:USERPROFILE\.claude\skills\yra-setup" -Force
+Remove-Item "$env:USERPROFILE\.codex\skills\yra-news-summarize-today" -Force
+Remove-Item "$env:USERPROFILE\.codex\skills\yra-news-search" -Force
+Remove-Item "$env:USERPROFILE\.codex\skills\yra-setup" -Force
 ```
 
-卸载后需要重启 Claude Code 才会生效。
+卸载后需要**重启对应的 AI 客户端**（Claude Code / Codex）才会生效。
 
 ### 5. 诊断问题
 
@@ -217,10 +258,15 @@ which yra && yra version
 # 检查认证状态（JSON）
 yra auth status --format json
 
-# 检查 skills 是否安装
+# 检查 skills 是否安装（Claude Code）
 ls -la ~/.claude/skills/yra-news-summarize-today \
        ~/.claude/skills/yra-news-search \
        ~/.claude/skills/yra-setup
+
+# 检查 skills 是否安装（Codex）
+ls -la ~/.codex/skills/yra-news-summarize-today \
+       ~/.codex/skills/yra-news-search \
+       ~/.codex/skills/yra-setup
 
 # 测试数据访问
 yra news list-hours --date today --format json
@@ -244,13 +290,16 @@ yra 是否已安装？ → which yra
     ↓ 是
       ↓
       skills 是否存在？ → ls ~/.claude/skills/yra-news-* ~/.claude/skills/yra-setup
+                       → ls ~/.codex/skills/yra-news-* ~/.codex/skills/yra-setup
       ↓ 否
         → 让用户重新运行 INSTALL.md 的"安装 Skills"部分
+        → 提示用 --target 控制范围：只想装 Claude Code 就 --target claude，
+          只想装 Codex 就 --target codex，默认两个都装
       ↓ 是
         ↓
-        自安装以来是否重启过 Claude Code？（需要用户确认）
+        自安装以来是否重启过对应 AI 客户端？（Claude Code / Codex）
         ↓ 否
-          → 提示用户重启 Claude Code
+          → 提示用户重启对应的 AI 客户端
         ↓ 是
           ↓
           测试数据访问：yra news list-hours --date today

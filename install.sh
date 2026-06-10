@@ -1,14 +1,19 @@
 #!/bin/bash
 # YIWO Research App - Unified installer
 #
-# Installs the yra CLI binary and Claude Code skills to the local machine.
+# Installs the yra CLI binary and the yra skills to one or more AI agent
+# runtimes on the local machine. Currently supported:
+#   - Claude Code  (skills → ~/.claude/skills/)
+#   - Codex        (skills → ~/.codex/skills/)
+#
 # All operations are self-contained: files are COPIED (not symlinked) so
 # the install survives removal of the source repo.
 #
 # Usage:
-#   ./install.sh                                      # Default: yra + skills
+#   ./install.sh                                      # Default: yra + skills to both runtimes
 #   ./install.sh --cli-only                           # Install yra only
 #   ./install.sh --skills-only                        # Install skills only
+#   ./install.sh --target claude|codex|both           # Pick runtime (default: both)
 #   ./install.sh --bin-dir <path>                     # Custom binary dir (default ~/.local/bin)
 #   ./install.sh --skills-dir <path>                  # Custom skills parent (default ~)
 #   ./install.sh --version v0.1.0                     # Specific yra version (default latest)
@@ -22,6 +27,7 @@ SKILLS_PARENT="$HOME"
 VERSION="latest"
 INSTALL_CLI=1
 INSTALL_SKILLS=1
+TARGET="both"   # claude | codex | both
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -41,6 +47,10 @@ while [[ $# -gt 0 ]]; do
             INSTALL_CLI=0
             shift
             ;;
+        --target)
+            TARGET="$2"
+            shift 2
+            ;;
         --version)
             VERSION="$2"
             shift 2
@@ -56,9 +66,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ----- Validate --target -----
+
+case "$TARGET" in
+    claude|codex|both) ;;
+    *) echo "Invalid --target: $TARGET (expected: claude | codex | both)" >&2; exit 1 ;;
+esac
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_SRC="$SCRIPT_DIR/skills"
-SKILLS_TARGET="$SKILLS_PARENT/.claude/skills"
+
+# Map target runtime → skills directory.
+claude_skills_dir() { echo "$SKILLS_PARENT/.claude/skills"; }
+codex_skills_dir()  { echo "$SKILLS_PARENT/.codex/skills"; }
 
 # ----- Detect platform -----
 
@@ -130,13 +150,15 @@ install_cli() {
     "$BIN_DIR/$BINARY" version 2>&1 | sed 's/^/  /'
 }
 
-# ----- Install skills -----
+# ----- Install skills into a single target directory -----
 
-install_skills() {
+install_skills_to() {
+    local LABEL="$1"
+    local SKILLS_TARGET="$2"
+
     echo ""
-    echo "=== Install skills ==="
+    echo "=== Install skills → ${LABEL} (${SKILLS_TARGET}) ==="
     echo "  Source: $SKILLS_SRC"
-    echo "  Target: $SKILLS_TARGET"
     echo ""
 
     if [ ! -d "$SKILLS_SRC" ]; then
@@ -177,14 +199,15 @@ install_skills() {
     done
 
     echo ""
-    echo "  Installed: $INSTALLED, Failed: $FAILED"
+    echo "  [${LABEL}] Installed: $INSTALLED, Failed: $FAILED"
     [ $FAILED -gt 0 ] && return 1
     return 0
 }
 
 # ----- Cleanup legacy skills (for upgrade from older names) -----
 
-cleanup_legacy_skills() {
+cleanup_legacy_skills_at() {
+    local SKILLS_TARGET="$1"
     local LEGACY=("yra-news-setup" "yra-news-search-news")
     for legacy in "${LEGACY[@]}"; do
         local path="$SKILLS_TARGET/$legacy"
@@ -193,6 +216,29 @@ cleanup_legacy_skills() {
             echo "  ✓ Removed legacy skill: $path"
         fi
     done
+}
+
+# ----- Install skills (multi-target) -----
+
+install_skills_all() {
+    local ANY_FAIL=0
+    case "$TARGET" in
+        claude)
+            cleanup_legacy_skills_at "$(claude_skills_dir)"
+            install_skills_to "Claude Code" "$(claude_skills_dir)" || ANY_FAIL=1
+            ;;
+        codex)
+            cleanup_legacy_skills_at "$(codex_skills_dir)"
+            install_skills_to "Codex" "$(codex_skills_dir)" || ANY_FAIL=1
+            ;;
+        both)
+            cleanup_legacy_skills_at "$(claude_skills_dir)"
+            install_skills_to "Claude Code" "$(claude_skills_dir)" || ANY_FAIL=1
+            cleanup_legacy_skills_at "$(codex_skills_dir)"
+            install_skills_to "Codex" "$(codex_skills_dir)" || ANY_FAIL=1
+            ;;
+    esac
+    return $ANY_FAIL
 }
 
 # ----- Run -----
@@ -204,8 +250,7 @@ if [[ $INSTALL_CLI -eq 1 ]]; then
 fi
 
 if [[ $INSTALL_SKILLS -eq 1 ]]; then
-    cleanup_legacy_skills
-    install_skills || FAILED=1
+    install_skills_all || FAILED=1
 fi
 
 # ----- Summary -----
@@ -216,7 +261,15 @@ if [[ $INSTALL_CLI -eq 1 ]] && [[ $FAILED -eq 0 ]]; then
     echo "yra:    $BIN_DIR/$BINARY"
 fi
 if [[ $INSTALL_SKILLS -eq 1 ]] && [[ $FAILED -eq 0 ]]; then
-    echo "skills: $SKILLS_TARGET"
+    case "$TARGET" in
+        claude) echo "skills: $(claude_skills_dir)  (Claude Code)" ;;
+        codex)  echo "skills: $(codex_skills_dir)  (Codex)" ;;
+        both)
+            echo "skills:"
+            echo "  - $(claude_skills_dir)  (Claude Code)"
+            echo "  - $(codex_skills_dir)  (Codex)"
+            ;;
+    esac
 fi
 
 if [[ $FAILED -gt 0 ]]; then
@@ -240,6 +293,13 @@ if [[ $INSTALL_CLI -eq 1 ]]; then
     echo "  • $BINARY auth login   # authenticate with Feishu"
 fi
 if [[ $INSTALL_SKILLS -eq 1 ]]; then
-    echo "  • Restart Claude Code to load the new skills."
+    case "$TARGET" in
+        claude|codex)
+            echo "  • Restart your AI client (Claude Code / Codex) to load the new skills."
+            ;;
+        both)
+            echo "  • Restart Claude Code and/or Codex to load the new skills."
+            ;;
+    esac
 fi
 echo "  • To uninstall later: $SCRIPT_DIR/uninstall.sh"

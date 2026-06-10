@@ -1,6 +1,6 @@
 # 安装指南
 
-本文档面向**终端用户**。`install.sh` 会一次性安装 `yra` CLI 和 Claude Code skills。不涉及代码、编译或开发。
+本文档面向**终端用户**。`install.sh` 会一次性安装 `yra` CLI 和 yra skills。skills 默认同时装到 Claude Code（`~/.claude/skills/`）和 Codex（`~/.codex/skills/`），可用 `--target` 控制。不涉及代码、编译或开发。
 
 ## 你需要知道什么
 
@@ -33,7 +33,7 @@ cd yiwo-research-app
 2. 验证本机有 Chrome/Edge/Chromium（没有则提示安装）
 3. 从 [GitHub Releases](https://github.com/yiwocapital/yiwo-research-app/releases) 下载对应平台的 `yra` 二进制
 4. 安装到 `~/.local/bin/yra`
-5. 复制 3 个 Claude Code skills 到 `~/.claude/skills/`
+5. 复制 3 个 yra skills 到 Claude Code（`~/.claude/skills/`）和 Codex（`~/.codex/skills/`）
 
 需要自定义路径或只装部分：
 
@@ -43,10 +43,13 @@ cd yiwo-research-app
 
 常用选项：
 - `--bin-dir <path>`：自定义 yra 二进制目录（默认 `~/.local/bin`）
-- `--skills-dir <path>`：自定义 skills 父目录（默认 `~`，最终落到 `~/.claude/skills`）
+- `--skills-dir <path>`：自定义 skills 父目录（默认 `~`，最终落到 `~/.claude/skills` / `~/.codex/skills`）
+- `--target claude|codex|both`：选择把 skills 装到哪个 AI 客户端（默认 `both`，即两个都装）
 - `--cli-only`：只装 yra，不装 skills
 - `--skills-only`：只装 skills，不装 yra
 - `--version v0.3.0`：安装指定版本（默认 latest）
+
+> **Codex 用户注意**：Codex 的 skills 目录是 `~/.codex/skills/`（不是 `~/.claude/skills/`）。默认 `--target both` 会同时装到两个目录，互不干扰。只想装到 Codex 时用 `./install.sh --target codex`。
 
 ## 配置 PATH（重要！）
 
@@ -212,7 +215,7 @@ bash /path/to/yiwo-research-app/uninstall.sh
 ./uninstall.sh --yes
 ```
 
-`uninstall.sh` 会删除 yra 二进制和 3 个 skills 目录。
+`uninstall.sh` 默认会从 Claude Code（`~/.claude/skills/`）和 Codex（`~/.codex/skills/`）两个位置删除 3 个 skills，外加 yra 二进制。可用 `--target claude|codex|both` 限定范围。
 
 仅删 yra 二进制：
 ```bash
@@ -220,11 +223,18 @@ rm -f ~/.local/bin/yra
 rm -rf ~/.config/yiwo-research-app
 ```
 
-仅删 skills：
+仅删 skills（Claude Code）：
 ```bash
 rm -rf ~/.claude/skills/yra-news-summarize-today
 rm -rf ~/.claude/skills/yra-news-search-news
 rm -rf ~/.claude/skills/yra-setup
+```
+
+仅删 skills（Codex）：
+```bash
+rm -rf ~/.codex/skills/yra-news-summarize-today
+rm -rf ~/.codex/skills/yra-news-search-news
+rm -rf ~/.codex/skills/yra-setup
 ```
 
 ## 升级
@@ -243,7 +253,7 @@ git pull
 ./install.sh --version v0.3.0
 ```
 
-升级**不会**清除你的 profile（cookie 保留在 `~/.config/yiwo-research-app/browser-profile/`）。
+升级**不会**清除你的 profile（cookie 保留在 `~/.config/yiwo-research-app/browser-profile/`）。升级后需要**重启**你用的 AI 客户端（Claude Code / Codex）才能加载新 skill。
 
 ## 常见问题
 
