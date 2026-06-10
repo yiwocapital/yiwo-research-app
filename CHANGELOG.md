@@ -4,8 +4,18 @@
 
 ### 你需要做什么
 
-1. 升级 yra：`./install.sh`（一次重装二进制 + 3 个 skills）
-2. **升级后必须重启 Claude Code**，新 skill 内容才会被加载（已加载的 skill 在内存里，不重启不会刷新）
+1. **如果你是 v0.3.4 用户，立刻升级** —— v0.3.4 的 `yra news sync-today` / `get-hour` 文件下载**全部 404**，本次修复
+2. 升级 yra：`./install.sh`（一次重装二进制 + 3 个 skills）
+3. **升级后必须重启 Claude Code**，新 skill 内容才会被加载（已加载的 skill 在内存里，不重启不会刷新）
+
+### 修复（紧急）
+
+- **`yra news sync-today` / `get-hour` 下载 404 回归**
+  - v0.3.4 改用直连飞书 web API 时误把飞书 `children/list` 返回的 `token`（drive 节点 ID）当作 `obj_token`（文件内容 ID）放在 `FileMeta.Token` 里返回
+  - 下载请求 hit `/space/api/box/stream/download/all/<DRIVE_NODE_ID>/` —— 该端点要的是文件内容 ID，所以全部 404
+  - 改为正确返回 `obj_token`；新增单元测试 `TestParseAPIResponse_TokenIsObjTokenNotDriveID` 用真实数据（`nodcn...` drive ID → `DSWv...` obj_token）pin 住修复
+  - 新增 live E2E 测试 `TestLive_FolderToFile_E2E`（`//go:build live`），跑 `FolderPage.ListFiles` → `FilePage.Download` 完整路径，并探测下载 URL body 不为 404 —— 这是 gold-standard 回归测试，未来同类型 bug 即使所有单元测试都过也会被它逮住
+  - 已在真实 profile 上 `yra news sync-today` smoke：今日 12 个小时文件全量下载成功（355KB 真实新闻内容），0 个 404
 
 ### 新增功能
 
