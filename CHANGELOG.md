@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.3.5 (2026-06-10)
+
+### 你需要做什么
+
+1. 升级 yra：`./install.sh`（一次重装二进制 + 3 个 skills）
+2. **升级后必须重启 Claude Code**，新 skill 内容才会被加载（已加载的 skill 在内存里，不重启不会刷新）
+
+### 新增功能
+
+- **发布资产新增 `skills.tar.gz`**：yra-setup skill 的手动升级流程可以一次下载 yra 二进制 + skills 一起重装，不用 clone 仓库
+- **升级流程原子化**：每次 yra 二进制升级时**强制同时重装 skills**，无脑 rm + cp（不做版本检查 —— 文件小，检查反而更复杂）
+
+### 有什么变化
+
+- yra-setup skill「升级 yra CLI」一节升级为「升级 yra CLI + skills（原子操作）」，手动流程也走 release 上的 `skills.tar.gz`
+- 手动升级 macOS/Linux 改用 `install -m 0755` + 通配符（替 `mv` + `chmod`），原子性更好、BSD-tar 安全
+- 手动升级 Windows 改用 `Copy-Item` / `tar.exe`（Windows 10 1803+ 自带）
+- `publish.sh` 现在同时打包 `skills.tar.gz` 与 5 个平台二进制，作为 release 资产上传
+
 ## v0.3.4 (2026-06-10)
 
 ### 你需要做什么

@@ -90,37 +90,54 @@ yra auth login --force
 
 `--force` 会清掉当前 profile 并重弹扫码，等价于 `logout && login`。
 
-### 3. 升级 yra CLI
+### 3. 升级 yra CLI + skills（原子操作）
 
 > **关键陷阱（必读）**：tarball / zip 内的二进制文件名是 `yra_<OS>_<ARCH>`（带平台后缀，例如 `yra_Darwin_arm64` / `yra_Windows_x86_64.exe`），**不是 `yra` / `yra.exe`**。
 > `tar -xzf ... -C ~/.local/bin/` 不会覆盖现有的 `~/.local/bin/yra`，而是会**新增**一个 `yra_Darwin_arm64` 之类的文件 —— PATH 里的旧版 `yra` 还在跑，`yra version` 仍是旧号，看似升级失败。
 > **必须先解压到临时目录，再覆盖为 `yra`**。macOS/Linux 用 `install -m 0755` 一步完成「复制 + 0755 权限」；Windows 用 `Copy-Item -Force` 覆盖为 `yra.exe`。
+>
+> **每次升级 yra 必须同时升级 skills**。skills 文件小，无脑删旧装新（**不要做版本检查**）—— install.sh 和下面的手动流程都已按此设计。
 
-**推荐路径**：重新 `git clone` 后跑 `./install.sh`（[INSTALL.md](../../INSTALL.md)「升级」节）。脚本内部已正确处理平台检测 + 重命名 + 权限 + cleanup。
+**推荐路径**：cd 到 git clone 目录，`git pull` + `./install.sh`。一次完成 yra 二进制 + 3 个 skills 的重装。
 
 如果用户不想 clone 仓库，手动升级流程（自动检测平台，4 平台通杀）：
 
 **macOS / Linux**：
 
 ```bash
-# 1. 检测平台 → 构造 tarball URL
+# 1. 检测平台 → 构造 yra tarball + skills tarball URL
 OS=$(uname -s)
 ARCH=$(uname -m)
 case "$OS" in Darwin) OS="Darwin" ;; Linux) OS="Linux" ;; *) echo "Unsupported: $OS" >&2; exit 1 ;; esac
 case "$ARCH" in x86_64|amd64) ARCH="x86_64" ;; arm64|aarch64) ARCH="arm64" ;; *) echo "Unsupported: $ARCH" >&2; exit 1 ;; esac
-TARBALL_URL="https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_${OS}_${ARCH}.tar.gz"
+RELEASE_BASE="https://github.com/yiwocapital/yiwo-research-app/releases/latest/download"
+YRA_TARBALL_URL="${RELEASE_BASE}/yra_${OS}_${ARCH}.tar.gz"
+SKILLS_TARBALL_URL="${RELEASE_BASE}/skills.tar.gz"
 
-# 2. 下载 → 解压到临时目录 → install 一步覆盖到目标路径 → 清理
-curl -L -o /tmp/yra.tar.gz "$TARBALL_URL"
+# 2. 升级 yra 二进制
+curl -L -o /tmp/yra.tar.gz "$YRA_TARBALL_URL"
 rm -rf /tmp/yra-extract && mkdir -p /tmp/yra-extract
 tar -xzf /tmp/yra.tar.gz -C /tmp/yra-extract
 # 通配符 yra_* 匹配 yra_Darwin_arm64 / yra_Linux_x86_64 / yra_Linux_arm64
 install -m 0755 /tmp/yra-extract/yra_* "$HOME/.local/bin/yra"
-# 顺手清掉历史升级失败残留的 yra_Darwin_arm64 等
+# 顺手清掉历史升级失败残留
 rm -f "$HOME/.local/bin/yra_"*
 rm -rf /tmp/yra-extract /tmp/yra.tar.gz
 
-yra version   # 验证
+# 3. 升级 skills（无脑 rm + cp，不做版本检查）
+curl -L -o /tmp/yra-skills.tar.gz "$SKILLS_TARBALL_URL"
+rm -rf /tmp/yra-skills-extract && mkdir -p /tmp/yra-skills-extract
+tar -xzf /tmp/yra-skills.tar.gz -C /tmp/yra-skills-extract
+SKILLS_TARGET="$HOME/.claude/skills"
+mkdir -p "$SKILLS_TARGET"
+for skill in yra-news-summarize-today yra-news-search yra-setup; do
+    rm -rf "$SKILLS_TARGET/$skill"
+    cp -R "/tmp/yra-skills-extract/skills/$skill" "$SKILLS_TARGET/$skill"
+done
+rm -rf /tmp/yra-skills-extract /tmp/yra-skills.tar.gz
+
+# 4. 验证
+yra version   # 重启 Claude Code 后 skills 才会被重新加载
 ```
 
 > **为什么不用 `tar -xzf -C ~/.local/bin/`**：tar 包内顶层文件名是 `yra_Darwin_arm64`（带平台后缀），不是 `yra`，直接 `-C` 解到目标目录不会覆盖现有 `~/.local/bin/yra`，而是多出一个 `yra_<platform>` 文件 —— `yra version` 看起来"没升级"。
@@ -131,23 +148,42 @@ yra version   # 验证
 
 ```powershell
 $BinName = "yra_Windows_x86_64"
+$ReleaseBase = "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download"
+$YraTarballUrl = "${ReleaseBase}/${BinName}.tar.gz"
+$SkillsTarballUrl = "${ReleaseBase}/skills.tar.gz"
 $InstallDir = "$env:LOCALAPPDATA\Programs\yra"
-$ZipPath = "$env:TEMP\yra.zip"
-$ExtractDir = "$env:TEMP\yra-extract"
+$SkillsTarget = "$env:USERPROFILE\.claude\skills"
+$YraTarballPath = "$env:TEMP\yra.tar.gz"
+$YraExtractDir = "$env:TEMP\yra-extract"
+$SkillsTarballPath = "$env:TEMP\yra-skills.tar.gz"
+$SkillsExtractDir = "$env:TEMP\yra-skills-extract"
 
-# 下载 → 解压到临时目录 → Copy-Item 覆盖为 yra.exe → 清理
+# 1. 升级 yra 二进制
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
-Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/${BinName}.zip" -OutFile $ZipPath
-Remove-Item -Recurse -Force $ExtractDir -ErrorAction SilentlyContinue
-Expand-Archive -Path $ZipPath -DestinationPath $ExtractDir -Force
-# zip 顶层是 yra_Windows_x86_64.exe（不在子目录里），Copy-Item 覆盖为 yra.exe
-Copy-Item -Path "${ExtractDir}\${BinName}.exe" -Destination "${InstallDir}\yra.exe" -Force
+Invoke-WebRequest -Uri $YraTarballUrl -OutFile $YraTarballPath
+Remove-Item -Recurse -Force $YraExtractDir -ErrorAction SilentlyContinue
+tar -xzf $YraTarballPath -C $YraExtractDir   # Windows 10 1803+ 自带 tar.exe
+# tar 顶层是 yra_Windows_x86_64.exe，重命名为 yra.exe
+Move-Item -Force "${YraExtractDir}\${BinName}.exe" "${InstallDir}\yra.exe"
 # 清理历史残留 + 临时文件
 Remove-Item -Force "${InstallDir}\${BinName}.exe" -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force $ExtractDir
-Remove-Item -Force $ZipPath
+Remove-Item -Recurse -Force $YraExtractDir
+Remove-Item -Force $YraTarballPath
 
-yra version   # 验证
+# 2. 升级 skills（无脑 rm + cp，不做版本检查）
+Invoke-WebRequest -Uri $SkillsTarballUrl -OutFile $SkillsTarballPath
+Remove-Item -Recurse -Force $SkillsExtractDir -ErrorAction SilentlyContinue
+tar -xzf $SkillsTarballPath -C $SkillsExtractDir
+New-Item -ItemType Directory -Force -Path $SkillsTarget | Out-Null
+foreach ($skill in @("yra-news-summarize-today", "yra-news-search", "yra-setup")) {
+    Remove-Item -Recurse -Force "${SkillsTarget}\${skill}" -ErrorAction SilentlyContinue
+    Copy-Item -Recurse -Force -Path "${SkillsExtractDir}\skills\${skill}" -Destination "${SkillsTarget}\${skill}"
+}
+Remove-Item -Recurse -Force $SkillsExtractDir
+Remove-Item -Force $SkillsTarballPath
+
+# 3. 验证
+yra version   # 重启 Claude Code 后 skills 才会被重新加载
 ```
 
 > **提示**：升级不会清除用户的认证信息（token 保存在 `~/.config/yiwo-research-app/`）。
