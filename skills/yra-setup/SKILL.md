@@ -92,22 +92,48 @@ yra auth login --force
 
 ### 3. 升级 yra CLI
 
-终端用户按 [INSTALL.md](../../INSTALL.md) 中的命令手动下载新版本：
+> **关键陷阱（必读）**：tarball 内的二进制文件名是 `yra_<OS>_<ARCH>`（带平台后缀，例如 `yra_Darwin_arm64`），**不是 `yra`**。
+> `tar -xzf ... -C ~/.local/bin/` 不会覆盖现有的 `~/.local/bin/yra`，而是会**新增**一个 `yra_Darwin_arm64` 之类的文件 —— PATH 里的旧版 `yra` 还在跑，`yra version` 仍是旧号，看似升级失败。
+> **必须解压到临时目录 → 显式 `mv` 重命名为 `yra` → 才能覆盖旧二进制。**
 
-**macOS**：
+**推荐路径**：重新 `git clone` 后跑 `./install.sh`（[INSTALL.md](../../INSTALL.md)「升级」节）。脚本内部已正确处理平台检测 + 重命名 + 权限 + cleanup。
+
+如果用户不想 clone 仓库，手动升级流程（自动检测平台）：
+
+**macOS / Linux**：
+
 ```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Darwin_arm64.tar.gz" && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/
+# 检测平台 → 构造 tarball 内文件名
+OS=$(uname -s)
+ARCH=$(uname -m)
+case "$OS" in Darwin) OS="Darwin" ;; Linux) OS="Linux" ;; *) echo "Unsupported: $OS" >&2; exit 1 ;; esac
+case "$ARCH" in x86_64|amd64) ARCH="x86_64" ;; arm64|aarch64) ARCH="arm64" ;; *) echo "Unsupported: $ARCH" >&2; exit 1 ;; esac
+BIN_NAME="yra_${OS}_${ARCH}"
+
+# 下载 → 解压到 /tmp/ → 清理旧的平台后缀残留 → 重命名为 yra → 赋权限 → 清理
+curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/${BIN_NAME}.tar.gz" \
+  && tar -xzf /tmp/yra.tar.gz -C /tmp/ \
+  && rm -f "$HOME/.local/bin/yra_"* \
+  && mv "/tmp/${BIN_NAME}" "$HOME/.local/bin/yra" \
+  && chmod +x "$HOME/.local/bin/yra" \
+  && rm -f /tmp/yra.tar.gz \
+  && yra version
 ```
 
-**Linux**：
-```bash
-curl -L -o /tmp/yra.tar.gz "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Linux_x86_64.tar.gz" && tar -xzf /tmp/yra.tar.gz -C ~/.local/bin/
-```
+`rm -f "$HOME/.local/bin/yra_"*` 会清掉之前升级失败时残留的 `yra_Darwin_arm64` 之类旧文件，让 `ls ~/.local/bin/` 干净。
 
-**Windows**：
+**Windows**（PowerShell）：
+
 ```powershell
-Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/yra_Windows_x86_64.zip" -OutFile "$env:TEMP\yra.zip"
-Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath "$env:LOCALAPPDATA\Programs\yra" -Force
+$BinName = "yra_Windows_x86_64"
+$InstallDir = "$env:LOCALAPPDATA\Programs\yra"
+New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+Invoke-WebRequest -Uri "https://github.com/yiwocapital/yiwo-research-app/releases/latest/download/${BinName}.zip" -OutFile "$env:TEMP\yra.zip"
+Expand-Archive -Path "$env:TEMP\yra.zip" -DestinationPath $InstallDir -Force
+# zip 内是 yra_Windows_x86_64.exe，必须重命名为 yra.exe
+Move-Item -Force "${InstallDir}\${BinName}.exe" "${InstallDir}\yra.exe"
+Remove-Item "$env:TEMP\yra.zip"
+yra version
 ```
 
 > **提示**：升级不会清除用户的认证信息（token 保存在 `~/.config/yiwo-research-app/`）。
